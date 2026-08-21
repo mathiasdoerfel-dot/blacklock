@@ -3,6 +3,6 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pure_black"
+    android:background="@android:color/transparent"
     android:clickable="true"
     android:focusable="false" />
