@@ -12,7 +12,10 @@ import kotlin.math.ceil
 data class FolderStat(
     val def: WatchedFolderDef,
     val enabled: Boolean,
+    val currentRelativePath: String,
+    val absolutePath: String,
     val exists: Boolean,
+    val isCustom: Boolean,
     val fileCount: Int,
     val totalBytes: Long
 )
@@ -89,7 +92,9 @@ class CleanerRepository(private val context: Context) {
     fun getFolderStats(): List<FolderStat> {
         return CleanerConfig.DEFAULT_FOLDERS.map { def ->
             val enabled = config.isFolderEnabled(def.id)
-            val dir = def.resolveFile()
+            val currentRelPath = config.getFolderPath(def.id)
+            val isCustom = config.isCustomPath(def.id)
+            val dir = config.resolveFolderFile(def.id)
             val exists = dir.exists() && dir.isDirectory
             var count = 0
             var bytes = 0L
@@ -105,7 +110,10 @@ class CleanerRepository(private val context: Context) {
             FolderStat(
                 def = def,
                 enabled = enabled,
+                currentRelativePath = currentRelPath,
+                absolutePath = dir.absolutePath,
                 exists = exists,
+                isCustom = isCustom,
                 fileCount = count,
                 totalBytes = bytes
             )
@@ -148,7 +156,7 @@ class CleanerRepository(private val context: Context) {
 
         for (def in CleanerConfig.DEFAULT_FOLDERS) {
             if (!config.isFolderEnabled(def.id)) continue
-            val folder = def.resolveFile()
+            val folder = config.resolveFolderFile(def.id)
             if (!folder.exists() || !folder.isDirectory) continue
 
             val files = folder.listFiles().orEmpty()

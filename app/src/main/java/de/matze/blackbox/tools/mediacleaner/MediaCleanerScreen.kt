@@ -52,6 +52,11 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
     var previewItem by remember { mutableStateOf<TrashItem?>(null) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
 
+    // Dialog state for folder path editing
+    var folderToEdit by remember { mutableStateOf<FolderStat?>(null) }
+    var showFolderPickerFor by remember { mutableStateOf<FolderStat?>(null) }
+    var showManualPathFor by remember { mutableStateOf<FolderStat?>(null) }
+
     fun refreshData() {
         scope.launch {
             isLoading = true
@@ -149,6 +154,9 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                         repo.config.setFolderEnabled(defId, enabled)
                         refreshData()
                     },
+                    onEditFolder = { stat ->
+                        folderToEdit = stat
+                    },
                     onCleanNow = {
                         scope.launch {
                             isLoading = true
@@ -228,6 +236,109 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
         }
     }
 
+    // Options Modal when clicking Edit on a folder
+    folderToEdit?.let { stat ->
+        AlertDialog(
+            onDismissRequest = { folderToEdit = null },
+            title = {
+                Text(text = stat.def.title, color = Color.White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Aktueller Pfad: ${stat.currentRelativePath}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF9CA3AF)
+                    )
+                    Text(
+                        text = if (stat.exists) "Status: ✓ Ordner existiert (${stat.fileCount} Dateien)" else "Status: ⚠️ Ordner existiert auf dem Gerät nicht",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (stat.exists) Color(0xFF34D399) else Color(0xFFF87171)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            val target = stat
+                            folderToEdit = null
+                            showFolderPickerFor = target
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, tint = Color(0xFF818CF8))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Im Dateimanager auswählen", color = Color.White)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val target = stat
+                            folderToEdit = null
+                            showManualPathFor = target
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF818CF8))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Pfad manuell eingeben", color = Color.White)
+                    }
+
+                    if (stat.isCustom) {
+                        TextButton(
+                            onClick = {
+                                repo.config.resetFolderPath(stat.def.id)
+                                folderToEdit = null
+                                refreshData()
+                                Toast.makeText(context, "Pfad auf Standard zurückgesetzt", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Auf Standardpfad zurücksetzen", color = Color(0xFFF87171))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { folderToEdit = null }) {
+                    Text("Schließen", color = Color(0xFF9CA3AF))
+                }
+            },
+            containerColor = Color(0xFF1E1F29),
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Folder Picker Dialog
+    showFolderPickerFor?.let { stat ->
+        FolderPickerDialog(
+            initialRelativePath = stat.currentRelativePath,
+            onFolderSelected = { selectedPath ->
+                repo.config.setFolderPath(stat.def.id, selectedPath)
+                showFolderPickerFor = null
+                refreshData()
+                Toast.makeText(context, "Pfad aktualisiert: $selectedPath", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showFolderPickerFor = null }
+        )
+    }
+
+    // Manual Path Dialog
+    showManualPathFor?.let { stat ->
+        ManualPathDialog(
+            initialPath = stat.currentRelativePath,
+            onSave = { newPath ->
+                repo.config.setFolderPath(stat.def.id, newPath)
+                showManualPathFor = null
+                refreshData()
+                Toast.makeText(context, "Pfad gespeichert: $newPath", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showManualPathFor = null }
+        )
+    }
+
     // Detail/Preview Dialog
     previewItem?.let { item ->
         MediaPreviewDialog(item = item, onDismiss = { previewItem = null })
@@ -278,11 +389,12 @@ private fun OverviewTab(
     lastRunSummary: String,
     lastRunTimestamp: Long,
     onToggleFolder: (String, Boolean) -> Unit,
+    onEditFolder: (FolderStat) -> Unit,
     onCleanNow: () -> Unit,
     onRequestPermission: () -> Unit
 ) {
-    val totalPendingFiles = folderStats.filter { it.enabled }.sumOf { it.fileCount }
-    val totalPendingBytes = folderStats.filter { it.enabled }.sumOf { it.totalBytes }
+    val totalPendingFiles = folderStats.filter { it.enabled && it.exists }.sumOf { it.fileCount }
+    val totalPendingBytes = folderStats.filter { it.enabled && it.exists }.sumOf { it.totalBytes }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -306,7 +418,7 @@ private fun OverviewTab(
                                 color = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(6.tx))
                         Text(
                             text = "Um die WhatsApp- und Quick-Share-Ordner aufzuräumen, benötigt BlackBox die Android-Berechtigung 'Zugriff auf alle Dateien'.",
                             style = MaterialTheme.typography.bodySmall,
@@ -387,13 +499,23 @@ private fun OverviewTab(
 
         // Folder List Header
         item {
-            Text(
-                text = "Überwachte Ordner",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Überwachte Ordner",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = "Tippen zum Anpassen",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF9CA3AF)
+                )
+            }
         }
 
         items(folderStats) { stat ->
@@ -402,57 +524,102 @@ private fun OverviewTab(
                     containerColor = if (stat.enabled) Color(0xFF1B1D28) else Color(0xFF15161D)
                 ),
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onEditFolder(stat) }
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(if (stat.enabled) Color(0xFF4F46E5).copy(alpha = 0.25f) else Color(0xFF374151)),
-                        contentAlignment = Alignment.Center
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = if (stat.def.id.contains("video")) Icons.Default.VideoLibrary else if (stat.def.id.contains("quick")) Icons.Default.Share else Icons.Default.PhotoLibrary,
-                            contentDescription = null,
-                            tint = if (stat.enabled) Color(0xFFA5B4FC) else Color(0xFF9CA3AF)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (stat.enabled) Color(0xFF4F46E5).copy(alpha = 0.25f) else Color(0xFF374151)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (stat.def.id.contains("video")) Icons.Default.VideoLibrary else if (stat.def.id.contains("quick")) Icons.Default.Share else Icons.Default.PhotoLibrary,
+                                contentDescription = null,
+                                tint = if (stat.enabled) Color(0xFFA5B4FC) else Color(0xFF9CA3AF)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stat.def.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                if (stat.isCustom) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0xFF6366F1).copy(alpha = 0.25f))
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Angepasst", style = MaterialTheme.typography.labelSmall, color = Color(0xFFA5B4FC))
+                                    }
+                                }
+                            }
+                            Text(
+                                text = stat.currentRelativePath,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF9CA3AF),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Switch(
+                            checked = stat.enabled,
+                            onCheckedChange = { onToggleFolder(stat.def.id, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF6366F1),
+                                uncheckedThumbColor = Color(0xFF9CA3AF),
+                                uncheckedTrackColor = Color(0xFF2B2D38)
+                            )
                         )
                     }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = stat.def.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = stat.def.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF9CA3AF),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (stat.exists) "${stat.fileCount} Dateien (${FormatUtils.formatBytes(stat.totalBytes)})" else "Ordner existiert noch nicht",
+                            text = if (stat.exists) "${stat.fileCount} Dateien (${FormatUtils.formatBytes(stat.totalBytes)})" else "⚠️ Ordner existiert nicht",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (stat.fileCount > 0) Color(0xFF34D399) else Color(0xFF6B7280)
+                            fontWeight = if (!stat.exists) FontWeight.Bold else FontWeight.Normal,
+                            color = if (!stat.exists) Color(0xFFF87171) else if (stat.fileCount > 0) Color(0xFF34D399) else Color(0xFF9CA3AF)
                         )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { onEditFolder(stat) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Pfad bearbeiten",
+                                tint = Color(0xFF818CF8),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Pfad anpassen",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF818CF8)
+                            )
+                        }
                     }
-                    Switch(
-                        checked = stat.enabled,
-                        onCheckedChange = { onToggleFolder(stat.def.id, it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF6366F1),
-                            uncheckedThumbColor = Color(0xFF9CA3AF),
-                            uncheckedTrackColor = Color(0xFF2B2D38)
-                        )
-                    )
                 }
             }
         }

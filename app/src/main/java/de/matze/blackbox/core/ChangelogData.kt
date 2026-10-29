@@ -33,6 +33,7 @@ object ChangelogData {
             changes = listOf(
                 "Initiales Release von BlackBox als modulare Android-Toolbox für das Pixel 11 Pro XL.",
                 "Modul 1 – Media Cleaner: Überwacht WhatsApp Images/Private, WhatsApp Video/Private und Download/Quick Share.",
+                "In-App-Verzeichnis-Browser & Pfad-Anpassung: Direkte Erkennung, ob Ordner existieren, und interaktive Ordner-Auswahl über das Dateisystem.",
                 "App-eigener Papierkorb mit 30 Tagen Aufbewahrung, Bild-/Video-Vorschau, Einzel- und Komplett-Wiederherstellung.",
                 "Flexibler Reinigungs-Zeitplan (Wöchentlich als Standard, Täglich, Alle 3/14 Tage oder Nur manuell) sowie Altersfilter.",
                 "Modul 2 – BlackLock: Integration von Quick-Settings-Tile, unsichtbarem Homescreen-Widget und Bedienungshilfen-Sperrfunktion."

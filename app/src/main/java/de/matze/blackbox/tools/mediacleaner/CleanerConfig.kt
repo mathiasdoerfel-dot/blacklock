@@ -21,14 +21,8 @@ enum class ScheduleMode(val id: String, val label: String, val intervalDays: Lon
 data class WatchedFolderDef(
     val id: String,
     val title: String,
-    val subtitle: String,
-    val relativePath: String
-) {
-    fun resolveFile(): File {
-        val root = Environment.getExternalStorageDirectory()
-        return File(root, relativePath)
-    }
-}
+    val defaultRelativePath: String
+)
 
 class CleanerConfig(context: Context) {
     private val prefs = context.getSharedPreferences("blackbox_cleaner_prefs", Context.MODE_PRIVATE)
@@ -38,22 +32,28 @@ class CleanerConfig(context: Context) {
             WatchedFolderDef(
                 id = "wa_images_private",
                 title = "WhatsApp Images · Private",
-                subtitle = "Android/media/com.whatsapp/.../WhatsApp Images/Private",
-                relativePath = "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images/Private"
+                defaultRelativePath = "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images/Private"
             ),
             WatchedFolderDef(
                 id = "wa_video_private",
                 title = "WhatsApp Video · Private",
-                subtitle = "Android/media/com.whatsapp/.../WhatsApp Video/Private",
-                relativePath = "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/Private"
+                defaultRelativePath = "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/Private"
             ),
             WatchedFolderDef(
                 id = "quick_share",
                 title = "Quick Share",
-                subtitle = "Download/Quick Share",
-                relativePath = "Download/Quick Share"
+                defaultRelativePath = "Download/Quick Share"
             )
         )
+
+        fun normalizeRelativePath(rawPath: String): String {
+            val rootPath = Environment.getExternalStorageDirectory().absolutePath
+            var cleaned = rawPath.trim()
+            if (cleaned.startsWith(rootPath)) {
+                cleaned = cleaned.removePrefix(rootPath)
+            }
+            return cleaned.trimStart('/', '\\').replace('\\', '/')
+        }
     }
 
     fun isFolderEnabled(folderId: String): Boolean {
@@ -62,6 +62,31 @@ class CleanerConfig(context: Context) {
 
     fun setFolderEnabled(folderId: String, enabled: Boolean) {
         prefs.edit().putBoolean("folder_enabled_$folderId", enabled).apply()
+    }
+
+    fun getFolderPath(folderId: String): String {
+        val defaultPath = DEFAULT_FOLDERS.find { it.id == folderId }?.defaultRelativePath ?: ""
+        return prefs.getString("folder_path_$folderId", defaultPath) ?: defaultPath
+    }
+
+    fun setFolderPath(folderId: String, path: String) {
+        val normalized = normalizeRelativePath(path)
+        prefs.edit().putString("folder_path_$folderId", normalized).apply()
+    }
+
+    fun resetFolderPath(folderId: String) {
+        prefs.edit().remove("folder_path_$folderId").apply()
+    }
+
+    fun isCustomPath(folderId: String): Boolean {
+        val defaultPath = DEFAULT_FOLDERS.find { it.id == folderId }?.defaultRelativePath ?: ""
+        return getFolderPath(folderId) != defaultPath
+    }
+
+    fun resolveFolderFile(folderId: String): File {
+        val relPath = getFolderPath(folderId)
+        val root = Environment.getExternalStorageDirectory()
+        return File(root, relPath)
     }
 
     var scheduleMode: ScheduleMode
