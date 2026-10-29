@@ -418,7 +418,7 @@ private fun OverviewTab(
                                 color = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.tx))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Um die WhatsApp- und Quick-Share-Ordner aufzuräumen, benötigt BlackBox die Android-Berechtigung 'Zugriff auf alle Dateien'.",
                             style = MaterialTheme.typography.bodySmall,
