@@ -5,4 +5,4 @@
     android:canPerformGestures="false"
     android:canRetrieveWindowContent="false"
     android:notificationTimeout="100"
-    android:settingsActivity="com.example.blacklock.MainActivity" />
+    android:settingsActivity="de.matze.blackbox.MainActivity" />

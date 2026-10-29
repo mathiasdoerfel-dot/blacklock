@@ -1,4 +1,4 @@
-package com.example.blacklock
+package de.matze.blackbox.tools.screenlock
 
 import android.service.quicksettings.TileService
 

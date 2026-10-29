@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BlackLock</string>
+    <string name="app_name">BlackBox</string>
+    <string name="accessibility_service_label">BlackBox Screen Lock</string>
+    <string name="lock_tile_label">Sperren</string>
+    <string name="lock_widget_label">BlackLock (Unsichtbar)</string>
 </resources>

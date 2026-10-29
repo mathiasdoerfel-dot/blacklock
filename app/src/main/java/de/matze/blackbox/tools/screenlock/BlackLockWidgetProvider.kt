@@ -1,10 +1,12 @@
-package com.example.blacklock
+package de.matze.blackbox.tools.screenlock
+
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import de.matze.blackbox.R
 
 class BlackLockWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -20,13 +22,15 @@ class BlackLockWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_LOCK) {
             LockAccessibilityService.lockScreen()
         }
     }
+
     companion object {
-        const val ACTION_LOCK = "com.example.blacklock.ACTION_LOCK"
+        const val ACTION_LOCK = "de.matze.blackbox.ACTION_LOCK"
     }
 }
