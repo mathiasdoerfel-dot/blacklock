@@ -21,6 +21,8 @@ android {
             storePassword = "blackboxkeystore"
             keyAlias = "blackbox"
             keyPassword = "blackboxkeystore"
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 

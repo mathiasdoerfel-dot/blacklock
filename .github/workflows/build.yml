@@ -20,17 +20,17 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v3
 
-      - name: Build Release APK
-        run: gradle assembleRelease
+      - name: Build Debug APK with Shared Keystore
+        run: gradle assembleDebug
 
       - name: Prepare APK Asset & Extract Version
         id: version_step
         run: |
           VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -n 1 | cut -d '"' -f 2)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "Release APK not found, searching in build outputs..."
+            echo "Debug APK not found, searching in build outputs..."
             APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           fi
           echo "Found APK at $APK_PATH"
