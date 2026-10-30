@@ -1,20 +1,53 @@
-name: Build Android APK
+name: Build & Release Android APK
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - uses: gradle/actions/setup-gradle@v3
-      - run: gradle assembleDebug
-      - uses: actions/upload-artifact@v4
+
+      - name: Build Release APK
+        run: gradle assembleRelease
+
+      - name: Prepare APK Asset & Extract Version
+        id: version_step
+        run: |
+          VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -n 1 | cut -d '"' -f 2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "Release APK not found, searching in build outputs..."
+            APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          fi
+          echo "Found APK at $APK_PATH"
+          cp "$APK_PATH" BlackBox.apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: BlackBox-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: BlackBox-v${{ env.VERSION }}
+          path: BlackBox.apk
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: BlackBox v${{ env.VERSION }}
+          files: BlackBox.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

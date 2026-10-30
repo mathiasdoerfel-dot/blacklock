@@ -11,14 +11,24 @@ android {
         applicationId = "de.matze.blackbox"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.0.1"
+        versionCode = 2
+        versionName = "0.0.2"
+    }
+
+    signingConfigs {
+        create("releaseKey") {
+            storeFile = file("signing.keystore")
+            storePassword = "blackboxkeystore"
+            keyAlias = "blackbox"
+            keyPassword = "blackboxkeystore"
+        }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("releaseKey")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -27,7 +37,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("releaseKey")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

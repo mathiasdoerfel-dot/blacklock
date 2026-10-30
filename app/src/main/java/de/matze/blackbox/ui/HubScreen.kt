@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import de.matze.blackbox.core.ChangelogData
 import de.matze.blackbox.core.ChangelogDialog
 import de.matze.blackbox.core.FormatUtils
+import de.matze.blackbox.core.updater.UpdateDialog
+import de.matze.blackbox.core.updater.UpdateInfo
+import de.matze.blackbox.core.updater.UpdateManager
 import de.matze.blackbox.tools.mediacleaner.CleanerRepository
 import de.matze.blackbox.tools.screenlock.LockAccessibilityService
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +38,8 @@ fun HubScreen(
     val context = LocalContext.current
     val repo = remember { CleanerRepository(context) }
     var showChangelog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var availableUpdateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
     var cleanerPendingFiles by remember { mutableIntStateOf(0) }
     var cleanerPendingBytes by remember { mutableLongStateOf(0L) }
@@ -51,6 +56,14 @@ fun HubScreen(
         cleanerPendingFiles = stats.filter { it.enabled }.sumOf { it.fileCount }
         cleanerPendingBytes = stats.filter { it.enabled }.sumOf { it.totalBytes }
         trashCount = trash.size
+
+        // Silent background update check
+        val updateRes = UpdateManager.checkForUpdate(context)
+        updateRes.onSuccess { info ->
+            if (info.isUpdateAvailable) {
+                availableUpdateInfo = info
+            }
+        }
     }
 
     Column(
@@ -98,29 +111,62 @@ fun HubScreen(
                 }
             }
 
-            // Version Pill (Opens Changelog)
-            Surface(
-                onClick = { showChangelog = true },
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFF1E202B)
+            // Actions in Header (Update Badge + Version Pill)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                if (availableUpdateInfo != null) {
+                    Surface(
+                        onClick = { showUpdateDialog = true },
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFF3730A3)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF34D399))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Update v${availableUpdateInfo?.latestVersion}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                // Version Pill (Opens Changelog)
+                Surface(
+                    onClick = { showChangelog = true },
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF1E202B)
                 ) {
-                    Text(
-                        text = "v${ChangelogData.CURRENT_VERSION}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFA5B4FC)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Changelog",
-                        tint = Color(0xFFA5B4FC),
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "v${ChangelogData.CURRENT_VERSION}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA5B4FC)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Changelog",
+                            tint = Color(0xFFA5B4FC),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
         }
@@ -218,7 +264,17 @@ fun HubScreen(
     }
 
     if (showChangelog) {
-        ChangelogDialog(onDismiss = { showChangelog = false })
+        ChangelogDialog(
+            onDismiss = { showChangelog = false },
+            onOpenUpdater = { showUpdateDialog = true }
+        )
+    }
+
+    if (showUpdateDialog) {
+        UpdateDialog(
+            initialUpdateInfo = availableUpdateInfo,
+            onDismiss = { showUpdateDialog = false }
+        )
     }
 }
 

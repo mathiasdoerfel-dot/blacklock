@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,9 +25,19 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.1"
+    const val CURRENT_VERSION = "0.0.2"
 
     val releases = listOf(
+        ChangelogRelease(
+            version = "0.0.2",
+            date = "30.10.2026",
+            changes = listOf(
+                "In-App Updater: Prüfung und One-Click-Download & Installation von neuen Versionen direkt über GitHub Releases.",
+                "GitHub Actions Release Automation: Automatisches Bereitstellen neuer APKs als GitHub Releases.",
+                "Fester Signaturschlüssel: Nahtlose Updates ohne 'Signaturkonflikt' und ohne Datenverlust.",
+                "Update-Dialog mit Download-Fortschrittsanzeige und automatischer Berechtigungsprüfung."
+            )
+        ),
         ChangelogRelease(
             version = "0.0.1",
             date = "29.10.2026",
@@ -43,7 +54,10 @@ object ChangelogData {
 }
 
 @Composable
-fun ChangelogDialog(onDismiss: () -> Unit) {
+fun ChangelogDialog(
+    onDismiss: () -> Unit,
+    onOpenUpdater: () -> Unit = {}
+) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
@@ -143,13 +157,28 @@ fun ChangelogDialog(onDismiss: () -> Unit) {
                 }
 
                 // Fixed Footer
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF1C1E26))
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.CenterEnd
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    TextButton(onClick = {
+                        onDismiss()
+                        onOpenUpdater()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = null,
+                            tint = Color(0xFFA5B4FC),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Nach Updates suchen", color = Color(0xFFA5B4FC))
+                    }
+
                     TextButton(onClick = onDismiss) {
                         Text("Schließen", color = Color(0xFF818CF8))
                     }
