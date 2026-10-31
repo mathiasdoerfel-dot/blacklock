@@ -1,5 +1,8 @@
 # ProGuard / R8 Rules for BlackBox
 
+# Keep all class/method names in plaintext (no obfuscation) for Play Protect safety
+-dontobfuscate
+
 # AndroidX & Compose
 -keepclassmembers class * extends androidx.compose.ui.Modifier { *; }
 -dontwarn androidx.compose.**
@@ -18,5 +21,6 @@
 
 # Keep our data classes and manifest models
 -keepclassmembers class de.matze.blackbox.tools.mediacleaner.TrashItem { *; }
+-keepclassmembers class de.matze.blackbox.tools.mediacleaner.PendingCleanFile { *; }
 -keepclassmembers class de.matze.blackbox.tools.mediacleaner.WatchedFolderDef { *; }
 -keepclassmembers class de.matze.blackbox.core.ChangelogRelease { *; }

@@ -25,13 +25,14 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.8"
+    const val CURRENT_VERSION = "0.0.9"
 
     val releases = listOf(
         ChangelogRelease(
-            version = "0.0.8",
+            version = "0.0.9",
             date = "31.10.2026",
             changes = listOf(
+                "App-Größen-Optimierung: Code- & Ressourcen-Shrinking reaktiviert bei garantierter Klartext-Struktur (-dontobfuscate) – APK-Größe wieder auf ca. 9 MB reduziert ohne Play-Protect-Warnung.",
                 "Play-Protect-Härtung: R8/Proguard-Verschleierung deaktiviert für transparenten Bytecode-Scan und Bereinigung ungenutzter Legacy-Berechtigungen (Boot, Storage-Altlasten).",
                 "Media Cleaner Manueller Scan & Feedback: Prominenter 'Ordner scannen'-Button mit Live-Status, Info-Dialog bei 0 Dateien und automatischer Pfad-Fallback für WhatsApp.",
                 "Media Cleaner Bereinigungs-Vorschau: Dialog vor dem Verschieben in den Papierkorb mit Dateianzahl, Speichergröße, Ordner-Aufteilung, Thumbnails und Vollbild-Vorschau.",
