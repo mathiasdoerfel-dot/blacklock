@@ -32,6 +32,7 @@ object ChangelogData {
             version = "0.0.4",
             date = "31.10.2026",
             changes = listOf(
+                "Manuelle Update-Prüfung: Automatische Hintergrundsuche entfernt – Prüfung erfolgt nur noch explizit per Knopfdruck.",
                 "Statusleisten-Abstand (Window Insets): Header sauber unterhalb der System-Statusleiste (Kamera-Punch-Hole, Uhrzeit, Akku) platziert.",
                 "Android Gestennavigation: Volle Unterstützung der Zurück-Wischgeste (Predictive Back) inklusive hierarchischer Navigation im Media Cleaner.",
                 "Gestenleisten-Schutz: Unterer Abstand (navigationBarsPadding) verhindert Überlappung mit dem Home-Gestenbalken.",

@@ -74,14 +74,6 @@ fun HubScreen(
         cleanerPendingFiles = stats.filter { it.enabled }.sumOf { it.fileCount }
         cleanerPendingBytes = stats.filter { it.enabled }.sumOf { it.totalBytes }
         trashCount = trash.size
-
-        // Silent background update check
-        val updateRes = UpdateManager.checkForUpdate(context)
-        updateRes.onSuccess { info ->
-            if (info.isUpdateAvailable) {
-                availableUpdateInfo = info
-            }
-        }
     }
 
     Column(
@@ -165,6 +157,19 @@ fun HubScreen(
                             )
                         }
                     }
+                }
+
+                // Manual Update Check Button
+                IconButton(
+                    onClick = { showUpdateDialog = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = "Nach Updates suchen",
+                        tint = Color(0xFFA5B4FC),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
                 // Version Pill (Opens Changelog)
