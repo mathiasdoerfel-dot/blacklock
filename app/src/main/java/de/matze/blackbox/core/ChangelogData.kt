@@ -32,6 +32,8 @@ object ChangelogData {
             version = "0.0.4",
             date = "31.10.2026",
             changes = listOf(
+                "Neues Modul: OLED Blackout – 100% stromloses Display (0 Watt) für Audio/Streams & vollständige Hosentaschen-Berührungssperre mit Schnellzugriff via Schnelleinstellungskachel und Doppel-Tap-Entsperrung.",
+                "Zero-Background-Architektur: Bereinigungsintervall standardmäßig auf rein manuell gesetzt – 0% Hintergrund-Prozesse und keine WorkManager-Ausführung im Standby.",
                 "Manuelle Update-Prüfung: Automatische Hintergrundsuche entfernt – Prüfung erfolgt nur noch explizit per Knopfdruck.",
                 "Statusleisten-Abstand (Window Insets): Header sauber unterhalb der System-Statusleiste (Kamera-Punch-Hole, Uhrzeit, Akku) platziert.",
                 "Android Gestennavigation: Volle Unterstützung der Zurück-Wischgeste (Predictive Back) inklusive hierarchischer Navigation im Media Cleaner.",

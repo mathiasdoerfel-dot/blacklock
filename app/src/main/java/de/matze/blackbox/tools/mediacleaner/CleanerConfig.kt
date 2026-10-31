@@ -5,15 +5,15 @@ import android.os.Environment
 import java.io.File
 
 enum class ScheduleMode(val id: String, val label: String, val intervalDays: Long) {
-    MANUAL("MANUAL", "Nur manuell", 0L),
+    MANUAL("MANUAL", "Nur manuell (Standard / 0% Hintergrund)", 0L),
     DAILY("DAILY", "Täglich", 1L),
     EVERY_3_DAYS("EVERY_3_DAYS", "Alle 3 Tage", 3L),
-    WEEKLY("WEEKLY", "Wöchentlich (Standard)", 7L),
+    WEEKLY("WEEKLY", "Wöchentlich", 7L),
     EVERY_14_DAYS("EVERY_14_DAYS", "Alle 14 Tage", 14L);
 
     companion object {
         fun fromId(id: String?): ScheduleMode {
-            return entries.find { it.id == id } ?: WEEKLY
+            return entries.find { it.id == id } ?: MANUAL
         }
     }
 }
@@ -90,8 +90,17 @@ class CleanerConfig(context: Context) {
     }
 
     var scheduleMode: ScheduleMode
-        get() = ScheduleMode.fromId(prefs.getString("schedule_mode", ScheduleMode.WEEKLY.id))
-        set(value) = prefs.edit().putString("schedule_mode", value.id).apply()
+        get() = ScheduleMode.fromId(prefs.getString("schedule_mode", ScheduleMode.MANUAL.id))
+        set(value) {
+            prefs.edit().putString("schedule_mode", value.id).apply()
+            if (value != ScheduleMode.MANUAL) {
+                hasConfiguredSchedule = true
+            }
+        }
+
+    var hasConfiguredSchedule: Boolean
+        get() = prefs.getBoolean("has_configured_schedule", false)
+        set(value) = prefs.edit().putBoolean("has_configured_schedule", value).apply()
 
     var minFileAgeDays: Int
         get() = prefs.getInt("min_file_age_days", 0)

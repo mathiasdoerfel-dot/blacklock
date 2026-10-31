@@ -32,10 +32,17 @@ object CleanupScheduler {
     fun syncSchedule(context: Context) {
         val config = CleanerConfig(context)
         val mode = config.scheduleMode
-        val workManager = WorkManager.getInstance(context)
 
         if (mode == ScheduleMode.MANUAL || mode.intervalDays <= 0L) {
-            workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
+            // If no automated schedule was ever configured, do not even initialize or touch WorkManager
+            if (config.hasConfiguredSchedule) {
+                try {
+                    val workManager = WorkManager.getInstance(context)
+                    workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
+                    workManager.pruneWork()
+                } catch (_: Exception) {}
+                config.hasConfiguredSchedule = false
+            }
             return
         }
 
@@ -50,10 +57,14 @@ object CleanupScheduler {
             .setConstraints(constraints)
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
-            UNIQUE_WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            request
-        )
+        try {
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueueUniquePeriodicWork(
+                UNIQUE_WORK_NAME,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                request
+            )
+            config.hasConfiguredSchedule = true
+        } catch (_: Exception) {}
     }
 }

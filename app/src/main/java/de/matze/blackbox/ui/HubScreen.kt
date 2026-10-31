@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.provider.Settings
 import de.matze.blackbox.core.ChangelogData
 import de.matze.blackbox.core.ChangelogDialog
 import de.matze.blackbox.core.FormatUtils
@@ -26,6 +27,7 @@ import de.matze.blackbox.core.updater.UpdateDialog
 import de.matze.blackbox.core.updater.UpdateInfo
 import de.matze.blackbox.core.updater.UpdateManager
 import de.matze.blackbox.tools.mediacleaner.CleanerRepository
+import de.matze.blackbox.tools.pocketlock.BlackoutService
 import de.matze.blackbox.tools.screenlock.LockAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,7 +39,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 @Composable
 fun HubScreen(
     onNavigateToCleaner: () -> Unit,
-    onNavigateToLock: () -> Unit
+    onNavigateToLock: () -> Unit,
+    onNavigateToPocketLock: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -51,12 +54,16 @@ fun HubScreen(
     var trashCount by remember { mutableIntStateOf(0) }
     var isLockActive by remember { mutableStateOf(LockAccessibilityService.isServiceOrSettingActive(context)) }
     var hasFilePermission by remember { mutableStateOf(repo.hasAllFilesAccess()) }
+    var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+    var isBlackoutRunning by remember { mutableStateOf(BlackoutService.isRunning) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasFilePermission = repo.hasAllFilesAccess()
                 isLockActive = LockAccessibilityService.isServiceOrSettingActive(context)
+                hasOverlayPermission = Settings.canDrawOverlays(context)
+                isBlackoutRunning = BlackoutService.isRunning
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -68,6 +75,8 @@ fun HubScreen(
     LaunchedEffect(Unit) {
         hasFilePermission = repo.hasAllFilesAccess()
         isLockActive = LockAccessibilityService.isServiceOrSettingActive(context)
+        hasOverlayPermission = Settings.canDrawOverlays(context)
+        isBlackoutRunning = BlackoutService.isRunning
         val (stats, trash) = withContext(Dispatchers.IO) {
             Pair(repo.getFolderStats(), repo.getTrashItems())
         }
@@ -246,6 +255,25 @@ fun HubScreen(
                     icon = Icons.Default.Lock,
                     iconBgColor = Color(0xFF1E293B),
                     onClick = onNavigateToLock
+                )
+            }
+
+            // Tool 3: OLED Blackout Card
+            item {
+                ToolCard(
+                    title = "OLED Blackout",
+                    subtitle = "0W Display & Hosentaschensperre",
+                    statusText = if (isBlackoutRunning) {
+                        "Aktiv (Doppeltippen zum Beenden)"
+                    } else if (hasOverlayPermission) {
+                        "Bereit (Tile & Schnellstart aktiv)"
+                    } else {
+                        "⚠️ Überlagerungs-Berechtigung erforderlich"
+                    },
+                    statusColor = if (isBlackoutRunning) Color(0xFF6366F1) else if (hasOverlayPermission) Color(0xFF34D399) else Color(0xFFFBBF24),
+                    icon = Icons.Default.DarkMode,
+                    iconBgColor = Color(0xFF312E81),
+                    onClick = onNavigateToPocketLock
                 )
             }
 

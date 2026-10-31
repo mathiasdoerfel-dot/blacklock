@@ -5,4 +5,6 @@
     <string name="lock_tile_label">Sperren</string>
     <string name="lock_widget_label">BlackLock (Unsichtbar)</string>
     <string name="lock_widget_description">Tippen, um den Bildschirm sofort zu sperren</string>
+    <string name="blackout_tile_label">Blackout</string>
+    <string name="blackout_tile_description">OLED 0W Display &amp; Taschensperre</string>
 </resources>

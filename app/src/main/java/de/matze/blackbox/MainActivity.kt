@@ -13,13 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import de.matze.blackbox.tools.mediacleaner.CleanupScheduler
 import de.matze.blackbox.tools.mediacleaner.MediaCleanerScreen
+import de.matze.blackbox.tools.pocketlock.PocketLockScreen
 import de.matze.blackbox.tools.screenlock.ScreenLockScreen
 import de.matze.blackbox.ui.HubScreen
 
 enum class AppScreen {
     HUB,
     MEDIA_CLEANER,
-    SCREEN_LOCK
+    SCREEN_LOCK,
+    POCKET_LOCK
 }
 
 class MainActivity : ComponentActivity() {
@@ -28,6 +30,12 @@ class MainActivity : ComponentActivity() {
 
         // Initialize WorkManager schedule according to saved settings
         CleanupScheduler.syncSchedule(applicationContext)
+
+        val targetScreen = if (intent?.getStringExtra("NAVIGATE_TO") == "POCKET_LOCK") {
+            AppScreen.POCKET_LOCK
+        } else {
+            AppScreen.HUB
+        }
 
         setContent {
             val darkColors = darkColorScheme(
@@ -45,7 +53,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var currentScreen by remember { mutableStateOf(AppScreen.HUB) }
+                    var currentScreen by remember { mutableStateOf(targetScreen) }
 
                     BackHandler(enabled = currentScreen != AppScreen.HUB) {
                         currentScreen = AppScreen.HUB
@@ -54,12 +62,16 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         AppScreen.HUB -> HubScreen(
                             onNavigateToCleaner = { currentScreen = AppScreen.MEDIA_CLEANER },
-                            onNavigateToLock = { currentScreen = AppScreen.SCREEN_LOCK }
+                            onNavigateToLock = { currentScreen = AppScreen.SCREEN_LOCK },
+                            onNavigateToPocketLock = { currentScreen = AppScreen.POCKET_LOCK }
                         )
                         AppScreen.MEDIA_CLEANER -> MediaCleanerScreen(
                             onBack = { currentScreen = AppScreen.HUB }
                         )
                         AppScreen.SCREEN_LOCK -> ScreenLockScreen(
+                            onBack = { currentScreen = AppScreen.HUB }
+                        )
+                        AppScreen.POCKET_LOCK -> PocketLockScreen(
                             onBack = { currentScreen = AppScreen.HUB }
                         )
                     }
