@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -57,26 +58,41 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
     var folderStats by remember { mutableStateOf<List<FolderStat>>(emptyList()) }
     var trashItems by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var isScanning by remember { mutableStateOf(false) }
     var previewItem by remember { mutableStateOf<TrashItem?>(null) }
     var pendingFilesForReview by remember { mutableStateOf<List<PendingCleanFile>?>(null) }
     var previewPendingFile by remember { mutableStateOf<PendingCleanFile?>(null) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
+    var showNoFilesDialog by remember { mutableStateOf(false) }
 
     // Dialog state for folder path editing
     var folderToEdit by remember { mutableStateOf<FolderStat?>(null) }
     var showFolderPickerFor by remember { mutableStateOf<FolderStat?>(null) }
     var showManualPathFor by remember { mutableStateOf<FolderStat?>(null) }
 
-    fun refreshData() {
+    fun refreshData(isManualTrigger: Boolean = false) {
         scope.launch {
-            isLoading = true
+            if (isManualTrigger) isScanning = true else isLoading = true
             hasPermission = repo.hasAllFilesAccess()
             val (stats, trash) = withContext(Dispatchers.IO) {
                 Pair(repo.getFolderStats(), repo.getTrashItems())
             }
             folderStats = stats
             trashItems = trash
-            isLoading = false
+            if (isManualTrigger) {
+                isScanning = false
+                val totalFound = stats.filter { it.enabled && it.exists }.sumOf { it.fileCount }
+                val totalBytes = stats.filter { it.enabled && it.exists }.sumOf { it.totalBytes }
+                val activeFolders = stats.count { it.enabled }
+                val msg = if (totalFound > 0) {
+                    "$totalFound Dateien (${FormatUtils.formatBytes(totalBytes)}) in $activeFolders aktiven Ordnern gefunden"
+                } else {
+                    "Scan abgeschlossen: 0 Dateien in $activeFolders aktiven Ordnern gefunden"
+                }
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            } else {
+                isLoading = false
+            }
         }
     }
 
@@ -153,7 +169,7 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                         )
                     }
                 }
-                IconButton(onClick = { refreshData() }) {
+                IconButton(onClick = { refreshData(isManualTrigger = true) }) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Aktualisieren",
@@ -191,6 +207,7 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                 0 -> OverviewTab(
                     hasPermission = hasPermission,
                     folderStats = folderStats,
+                    isScanning = isScanning,
                     lastRunSummary = repo.config.lastRunSummary,
                     lastRunTimestamp = repo.config.lastRunTimestamp,
                     onToggleFolder = { defId, enabled ->
@@ -200,6 +217,9 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                     onEditFolder = { stat ->
                         folderToEdit = stat
                     },
+                    onScanFolders = {
+                        refreshData(isManualTrigger = true)
+                    },
                     onCleanNow = {
                         scope.launch {
                             isLoading = true
@@ -208,7 +228,7 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                             }
                             isLoading = false
                             if (pending.isEmpty()) {
-                                Toast.makeText(context, "Keine zu bereinigenden Dateien gefunden", Toast.LENGTH_SHORT).show()
+                                showNoFilesDialog = true
                             } else {
                                 pendingFilesForReview = pending
                             }
@@ -432,6 +452,83 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
         )
     }
 
+    // No Files Found Info Dialog
+    if (showNoFilesDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoFilesDialog = false },
+            containerColor = Color(0xFF151722),
+            shape = RoundedCornerShape(18.dp),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF312E81)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFA5B4FC),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        "Keine Dateien gefunden",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "In den aktivierten Ordnern liegen aktuell keine Dateien, die den Bereinigungsregeln entsprechen:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFD1D5DB)
+                    )
+                    folderStats.filter { it.enabled }.forEach { stat ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stat.def.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = if (!stat.exists) "⚠️ Ordner nicht vorhanden" else "0 Dateien",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (!stat.exists) Color(0xFFF87171) else Color(0xFF9CA3AF)
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = Color(0xFF232635))
+                    Text(
+                        text = "Tipp: Falls deine Medien in einem anderen Pfad liegen (z. B. WhatsApp 'Sent' oder reguläre Downloads), tippe unten bei 'Überwachte Ordner' auf 'Pfad anpassen'.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFA5B4FC)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showNoFilesDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Verstanden")
+                }
+            }
+        )
+    }
+
     // Confirm Empty Trash Dialog
     if (showEmptyTrashDialog) {
         AlertDialog(
@@ -474,10 +571,12 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
 private fun OverviewTab(
     hasPermission: Boolean,
     folderStats: List<FolderStat>,
+    isScanning: Boolean,
     lastRunSummary: String,
     lastRunTimestamp: Long,
     onToggleFolder: (String, Boolean) -> Unit,
     onEditFolder: (FolderStat) -> Unit,
+    onScanFolders: () -> Unit,
     onCleanNow: () -> Unit,
     onRequestPermission: () -> Unit
 ) {
@@ -559,16 +658,69 @@ private fun OverviewTab(
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = onCleanNow,
-                        enabled = hasPermission && totalPendingFiles > 0,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Jetzt alle in Papierkorb verschieben", fontWeight = FontWeight.SemiBold)
+                        // Manual Scan Button
+                        OutlinedButton(
+                            onClick = onScanFolders,
+                            enabled = hasPermission && !isScanning,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFA5B4FC)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF4338CA))
+                        ) {
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color(0xFFA5B4FC),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isScanning) "Scannt..." else "Ordner scannen",
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Clean Button (Opens preview or shows info dialog)
+                        Button(
+                            onClick = onCleanNow,
+                            enabled = hasPermission,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (totalPendingFiles > 0) Color(0xFF4F46E5) else Color(0xFF232535),
+                                contentColor = if (totalPendingFiles > 0) Color.White else Color(0xFF9CA3AF)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Aufräumen",
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(

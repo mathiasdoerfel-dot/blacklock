@@ -86,7 +86,16 @@ class CleanerConfig(context: Context) {
     fun resolveFolderFile(folderId: String): File {
         val relPath = getFolderPath(folderId)
         val root = Environment.getExternalStorageDirectory()
-        return File(root, relPath)
+        val primary = File(root, relPath)
+        if (!primary.exists() && !isCustomPath(folderId)) {
+            // Auto-fallback for legacy WhatsApp path (Android 10 and below or alternate storage)
+            if (relPath.startsWith("Android/media/com.whatsapp/WhatsApp/")) {
+                val legacyRelPath = relPath.removePrefix("Android/media/com.whatsapp/")
+                val legacy = File(root, legacyRelPath)
+                if (legacy.exists()) return legacy
+            }
+        }
+        return primary
     }
 
     var scheduleMode: ScheduleMode
