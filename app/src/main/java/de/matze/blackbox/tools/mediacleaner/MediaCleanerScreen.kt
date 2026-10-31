@@ -7,9 +7,11 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,6 +58,8 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
     var trashItems by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var previewItem by remember { mutableStateOf<TrashItem?>(null) }
+    var pendingFilesForReview by remember { mutableStateOf<List<PendingCleanFile>?>(null) }
+    var previewPendingFile by remember { mutableStateOf<PendingCleanFile?>(null) }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
 
     // Dialog state for folder path editing
@@ -199,12 +203,15 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
                     onCleanNow = {
                         scope.launch {
                             isLoading = true
-                            val result = withContext(Dispatchers.IO) {
-                                repo.runCleanup(ignoreMinAge = (repo.config.minFileAgeDays == 0))
+                            val pending = withContext(Dispatchers.IO) {
+                                repo.getPendingCleanupFiles(ignoreMinAge = (repo.config.minFileAgeDays == 0))
                             }
-                            refreshData()
-                            val msg = "${result.movedCount} Dateien (${FormatUtils.formatBytes(result.movedBytes)}) in den Papierkorb verschoben"
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            isLoading = false
+                            if (pending.isEmpty()) {
+                                Toast.makeText(context, "Keine zu bereinigenden Dateien gefunden", Toast.LENGTH_SHORT).show()
+                            } else {
+                                pendingFilesForReview = pending
+                            }
                         }
                     },
                     onRequestPermission = {
@@ -378,9 +385,51 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
         )
     }
 
-    // Detail/Preview Dialog
+    // Cleanup Preview Dialog
+    pendingFilesForReview?.let { files ->
+        CleanupPreviewDialog(
+            files = files,
+            onDismiss = { pendingFilesForReview = null },
+            onPreviewFile = { previewPendingFile = it },
+            onConfirmCleanup = {
+                pendingFilesForReview = null
+                scope.launch {
+                    isLoading = true
+                    val result = withContext(Dispatchers.IO) {
+                        repo.runCleanup(ignoreMinAge = (repo.config.minFileAgeDays == 0))
+                    }
+                    refreshData()
+                    val msg = "${result.movedCount} Dateien (${FormatUtils.formatBytes(result.movedBytes)}) in den Papierkorb verschoben"
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            }
+        )
+    }
+
+    // Detail/Preview Dialog for Trash Item
     previewItem?.let { item ->
-        MediaPreviewDialog(item = item, onDismiss = { previewItem = null })
+        MediaPreviewDialog(
+            file = File(item.trashFilePath),
+            fileName = item.fileName,
+            folderTitle = item.sourceFolderTitle,
+            sizeBytes = item.sizeBytes,
+            dateLabel = "Gelöscht am",
+            dateTimeMs = item.trashedAt,
+            onDismiss = { previewItem = null }
+        )
+    }
+
+    // Detail/Preview Dialog for Pending File
+    previewPendingFile?.let { pending ->
+        MediaPreviewDialog(
+            file = pending.file,
+            fileName = pending.fileName,
+            folderTitle = pending.sourceFolderTitle,
+            sizeBytes = pending.sizeBytes,
+            dateLabel = "Zuletzt geändert",
+            dateTimeMs = pending.lastModified,
+            onDismiss = { previewPendingFile = null }
+        )
     }
 
     // Confirm Empty Trash Dialog
@@ -1108,8 +1157,240 @@ private fun ScheduleTab(
 }
 
 @Composable
+private fun CleanupPreviewDialog(
+    files: List<PendingCleanFile>,
+    onDismiss: () -> Unit,
+    onConfirmCleanup: () -> Unit,
+    onPreviewFile: (PendingCleanFile) -> Unit
+) {
+    val totalBytes = remember(files) { files.sumOf { it.sizeBytes } }
+    val folderCounts = remember(files) {
+        files.groupBy { it.sourceFolderTitle }.mapValues { it.value.size }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 360.dp, max = 580.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF12131A)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // Header (shrink-0)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF312E81)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = null,
+                                tint = Color(0xFFA5B4FC),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Bereinigungs-Vorschau",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "${files.size} Dateien · ${FormatUtils.formatBytes(totalBytes)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF34D399)
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Schließen",
+                            tint = Color(0xFF9CA3AF)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Folder breakdown pills
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    folderCounts.forEach { (title, count) ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF1E2235)
+                        ) {
+                            Text(
+                                text = "$title: $count",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFD1D5DB),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Tippe auf eine Datei, um eine Großansicht zu öffnen:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF9CA3AF)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Scrollable File List (flex-1)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(files, key = { it.file.absolutePath }) { pending ->
+                        PendingFileRow(
+                            item = pending,
+                            onClick = { onPreviewFile(pending) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Footer Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Abbrechen", color = Color(0xFF9CA3AF))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onConfirmCleanup,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteSweep,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("In Papierkorb", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PendingFileRow(
+    item: PendingCleanFile,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF181A26),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Thumbnail
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF0F1017)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (item.isImage || item.isVideo) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(item.file)
+                            .decoderFactory { result, options, _ -> VideoFrameDecoder(result.source, options) }
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.InsertDriveFile,
+                        contentDescription = null,
+                        tint = Color(0xFF9CA3AF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.fileName,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${FormatUtils.formatBytes(item.sizeBytes)} · ${item.sourceFolderTitle}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF9CA3AF),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.Visibility,
+                contentDescription = "Vorschau",
+                tint = Color(0xFF6B7280),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun MediaPreviewDialog(
-    item: TrashItem,
+    file: File,
+    fileName: String,
+    folderTitle: String,
+    sizeBytes: Long,
+    dateLabel: String,
+    dateTimeMs: Long,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1130,7 +1411,6 @@ private fun MediaPreviewDialog(
                         .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    val file = File(item.trashFilePath)
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(file)
@@ -1143,24 +1423,24 @@ private fun MediaPreviewDialog(
                 }
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = item.fileName,
+                    text = fileName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Herkunft: ${item.sourceFolderTitle}",
+                    text = "Herkunft: $folderTitle",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF9CA3AF)
                 )
                 Text(
-                    text = "Größe: ${FormatUtils.formatBytes(item.sizeBytes)}",
+                    text = "Größe: ${FormatUtils.formatBytes(sizeBytes)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF9CA3AF)
                 )
                 Text(
-                    text = "Gelöscht am: ${FormatUtils.formatDateTime(item.trashedAt)}",
+                    text = "$dateLabel: ${FormatUtils.formatDateTime(dateTimeMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF9CA3AF)
                 )

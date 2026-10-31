@@ -25,13 +25,14 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.5"
+    const val CURRENT_VERSION = "0.0.6"
 
     val releases = listOf(
         ChangelogRelease(
-            version = "0.0.5",
+            version = "0.0.6",
             date = "31.10.2026",
             changes = listOf(
+                "Media Cleaner Bereinigungs-Vorschau: Dialog vor dem Verschieben in den Papierkorb mit Dateianzahl, Speichergröße, Ordner-Aufteilung, Thumbnails und Vollbild-Vorschau.",
                 "Neues Modul: OLED Blackout – 100% stromloses Display (0 Watt) für Audio/Streams & vollständige Hosentaschen-Berührungssperre mit Schnellzugriff via Schnelleinstellungskachel und Doppel-Tap-Entsperrung.",
                 "Zero-Background-Architektur: Bereinigungsintervall standardmäßig auf rein manuell gesetzt – 0% Hintergrund-Prozesse und keine WorkManager-Ausführung im Standby.",
                 "Manuelle Update-Prüfung: Automatische Hintergrundsuche entfernt – Prüfung erfolgt nur noch explizit per Knopfdruck.",

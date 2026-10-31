@@ -20,6 +20,30 @@ data class FolderStat(
     val totalBytes: Long
 )
 
+data class PendingCleanFile(
+    val file: File,
+    val fileName: String,
+    val sourceFolderId: String,
+    val sourceFolderTitle: String,
+    val sizeBytes: Long,
+    val lastModified: Long
+) {
+    val isVideo: Boolean
+        get() {
+            val lower = fileName.lowercase()
+            return lower.endsWith(".mp4") || lower.endsWith(".mov") ||
+                lower.endsWith(".mkv") || lower.endsWith(".webm") || lower.endsWith(".3gp")
+        }
+
+    val isImage: Boolean
+        get() {
+            val lower = fileName.lowercase()
+            return lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+                lower.endsWith(".png") || lower.endsWith(".webp") ||
+                lower.endsWith(".gif") || lower.endsWith(".heic")
+        }
+}
+
 data class TrashItem(
     val id: String,
     val fileName: String,
@@ -137,6 +161,42 @@ class CleanerRepository(private val context: Context) {
             writeManifestInternal(validList)
         }
         return validList.sortedByDescending { it.trashedAt }
+    }
+
+    @Synchronized
+    fun getPendingCleanupFiles(ignoreMinAge: Boolean = false): List<PendingCleanFile> {
+        if (!hasAllFilesAccess()) return emptyList()
+
+        val now = System.currentTimeMillis()
+        val minAgeMs = if (ignoreMinAge) 0L else config.minFileAgeDays * 86_400_000L
+        val list = mutableListOf<PendingCleanFile>()
+
+        for (def in CleanerConfig.DEFAULT_FOLDERS) {
+            if (!config.isFolderEnabled(def.id)) continue
+            val folder = config.resolveFolderFile(def.id)
+            if (!folder.exists() || !folder.isDirectory) continue
+
+            val files = folder.listFiles().orEmpty()
+            for (file in files) {
+                if (!file.isFile) continue
+                if (file.name.equals(".nomedia", ignoreCase = true) || file.name.startsWith(".trashed")) continue
+
+                val ageMs = now - file.lastModified()
+                if (ageMs < minAgeMs) continue
+
+                list.add(
+                    PendingCleanFile(
+                        file = file,
+                        fileName = file.name,
+                        sourceFolderId = def.id,
+                        sourceFolderTitle = def.title,
+                        sizeBytes = file.length(),
+                        lastModified = file.lastModified()
+                    )
+                )
+            }
+        }
+        return list.sortedByDescending { it.lastModified }
     }
 
     @Synchronized
