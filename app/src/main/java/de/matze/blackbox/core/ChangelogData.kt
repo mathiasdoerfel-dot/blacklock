@@ -25,11 +25,11 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.4"
+    const val CURRENT_VERSION = "0.0.5"
 
     val releases = listOf(
         ChangelogRelease(
-            version = "0.0.4",
+            version = "0.0.5",
             date = "31.10.2026",
             changes = listOf(
                 "Neues Modul: OLED Blackout – 100% stromloses Display (0 Watt) für Audio/Streams & vollständige Hosentaschen-Berührungssperre mit Schnellzugriff via Schnelleinstellungskachel und Doppel-Tap-Entsperrung.",
