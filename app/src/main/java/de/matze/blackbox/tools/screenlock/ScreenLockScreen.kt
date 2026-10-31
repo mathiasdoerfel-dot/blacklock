@@ -27,10 +27,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
 @Composable
 fun ScreenLockScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var isServiceActive by remember { mutableStateOf(LockAccessibilityService.isRunning) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isServiceActive by remember {
+        mutableStateOf(LockAccessibilityService.isServiceOrSettingActive(context))
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isServiceActive = LockAccessibilityService.isServiceOrSettingActive(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -69,7 +88,7 @@ fun ScreenLockScreen(onBack: () -> Unit) {
                     )
                 }
             }
-            IconButton(onClick = { isServiceActive = LockAccessibilityService.isRunning }) {
+            IconButton(onClick = { isServiceActive = LockAccessibilityService.isServiceOrSettingActive(context) }) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Status aktualisieren",
@@ -172,7 +191,7 @@ fun ScreenLockScreen(onBack: () -> Unit) {
 
                     OutlinedButton(
                         onClick = {
-                            isServiceActive = LockAccessibilityService.isRunning
+                            isServiceActive = LockAccessibilityService.isServiceOrSettingActive(context)
                             val ok = LockAccessibilityService.lockScreen()
                             if (!ok) {
                                 Toast.makeText(

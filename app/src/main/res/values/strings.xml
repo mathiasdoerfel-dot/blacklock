@@ -4,4 +4,5 @@
     <string name="accessibility_service_label">BlackBox Screen Lock</string>
     <string name="lock_tile_label">Sperren</string>
     <string name="lock_widget_label">BlackLock (Unsichtbar)</string>
+    <string name="lock_widget_description">Tippen, um den Bildschirm sofort zu sperren</string>
 </resources>

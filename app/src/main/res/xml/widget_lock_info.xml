@@ -6,5 +6,7 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/widget_black_lock"
-    android:resizeMode="horizontal|vertical"
+    android:previewLayout="@layout/widget_black_lock"
+    android:description="@string/lock_widget_description"
+    android:resizeMode="none"
     android:widgetCategory="home_screen" />

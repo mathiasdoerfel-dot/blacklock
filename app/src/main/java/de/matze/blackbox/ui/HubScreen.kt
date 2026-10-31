@@ -30,12 +30,17 @@ import de.matze.blackbox.tools.screenlock.LockAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
 @Composable
 fun HubScreen(
     onNavigateToCleaner: () -> Unit,
     onNavigateToLock: () -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val repo = remember { CleanerRepository(context) }
     var showChangelog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -44,12 +49,25 @@ fun HubScreen(
     var cleanerPendingFiles by remember { mutableIntStateOf(0) }
     var cleanerPendingBytes by remember { mutableLongStateOf(0L) }
     var trashCount by remember { mutableIntStateOf(0) }
-    var isLockActive by remember { mutableStateOf(LockAccessibilityService.isRunning) }
+    var isLockActive by remember { mutableStateOf(LockAccessibilityService.isServiceOrSettingActive(context)) }
     var hasFilePermission by remember { mutableStateOf(repo.hasAllFilesAccess()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasFilePermission = repo.hasAllFilesAccess()
+                isLockActive = LockAccessibilityService.isServiceOrSettingActive(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         hasFilePermission = repo.hasAllFilesAccess()
-        isLockActive = LockAccessibilityService.isRunning
+        isLockActive = LockAccessibilityService.isServiceOrSettingActive(context)
         val (stats, trash) = withContext(Dispatchers.IO) {
             Pair(repo.getFolderStats(), repo.getTrashItems())
         }

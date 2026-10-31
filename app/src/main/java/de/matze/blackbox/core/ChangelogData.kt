@@ -25,9 +25,19 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.2"
+    const val CURRENT_VERSION = "0.0.3"
 
     val releases = listOf(
+        ChangelogRelease(
+            version = "0.0.3",
+            date = "31.10.2026",
+            changes = listOf(
+                "Sofortige Berechtigungserkennung: Bedienungshilfe, All-Files-Access und Paket-Installationsrechte werden beim Zurückkehren zur App ohne Verzögerung aktiv.",
+                "Widget- & Launcher-Härtung: Bereinigung von RemoteViews-Attributen für stabilen Halt im Pixel Launcher und Deaktivierung unpassender Skalierung.",
+                "Quick-Settings-Tile: Automatische Synchronisation des Kachel-Zustands (Aktiv / Inaktiv).",
+                "Optimierter App-Lifecycle und Stabilitätsverbesserungen im Screen Lock Modul."
+            )
+        ),
         ChangelogRelease(
             version = "0.0.2",
             date = "30.10.2026",

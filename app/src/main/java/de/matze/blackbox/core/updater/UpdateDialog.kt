@@ -22,12 +22,17 @@ import de.matze.blackbox.core.FormatUtils
 import kotlinx.coroutines.launch
 import java.io.File
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
 @Composable
 fun UpdateDialog(
     initialUpdateInfo: UpdateInfo? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
 
     var state by remember {
@@ -45,6 +50,22 @@ fun UpdateDialog(
     }
 
     var downloadedApkFile by remember { mutableStateOf<File?>(null) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val currentState = state
+                if (currentState is UpdateState.PermissionRequired && UpdateManager.canInstallPackages(context)) {
+                    state = UpdateState.ReadyToInstall(currentState.apkFile)
+                    UpdateManager.installApk(context, currentState.apkFile)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     fun triggerCheck() {
         state = UpdateState.Checking

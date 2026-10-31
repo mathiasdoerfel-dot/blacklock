@@ -36,9 +36,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
 @Composable
 fun MediaCleanerScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val repo = remember { CleanerRepository(context) }
 
@@ -67,6 +72,24 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
             folderStats = stats
             trashItems = trash
             isLoading = false
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val currentPerm = repo.hasAllFilesAccess()
+                if (currentPerm != hasPermission) {
+                    hasPermission = currentPerm
+                    if (currentPerm) {
+                        refreshData()
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
