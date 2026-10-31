@@ -25,13 +25,14 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.7"
+    const val CURRENT_VERSION = "0.0.8"
 
     val releases = listOf(
         ChangelogRelease(
-            version = "0.0.7",
+            version = "0.0.8",
             date = "31.10.2026",
             changes = listOf(
+                "Play-Protect-Härtung: R8/Proguard-Verschleierung deaktiviert für transparenten Bytecode-Scan und Bereinigung ungenutzter Legacy-Berechtigungen (Boot, Storage-Altlasten).",
                 "Media Cleaner Manueller Scan & Feedback: Prominenter 'Ordner scannen'-Button mit Live-Status, Info-Dialog bei 0 Dateien und automatischer Pfad-Fallback für WhatsApp.",
                 "Media Cleaner Bereinigungs-Vorschau: Dialog vor dem Verschieben in den Papierkorb mit Dateianzahl, Speichergröße, Ordner-Aufteilung, Thumbnails und Vollbild-Vorschau.",
                 "Neues Modul: OLED Blackout – 100% stromloses Display (0 Watt) für Audio/Streams & vollständige Hosentaschen-Berührungssperre mit Schnellzugriff via Schnelleinstellungskachel und Doppel-Tap-Entsperrung.",
