@@ -25,17 +25,19 @@ data class ChangelogRelease(
 )
 
 object ChangelogData {
-    const val CURRENT_VERSION = "0.0.3"
+    const val CURRENT_VERSION = "0.0.4"
 
     val releases = listOf(
         ChangelogRelease(
-            version = "0.0.3",
+            version = "0.0.4",
             date = "31.10.2026",
             changes = listOf(
-                "Sofortige Berechtigungserkennung: Bedienungshilfe, All-Files-Access und Paket-Installationsrechte werden beim Zurückkehren zur App ohne Verzögerung aktiv.",
+                "Statusleisten-Abstand (Window Insets): Header sauber unterhalb der System-Statusleiste (Kamera-Punch-Hole, Uhrzeit, Akku) platziert.",
+                "Android Gestennavigation: Volle Unterstützung der Zurück-Wischgeste (Predictive Back) inklusive hierarchischer Navigation im Media Cleaner.",
+                "Gestenleisten-Schutz: Unterer Abstand (navigationBarsPadding) verhindert Überlappung mit dem Home-Gestenbalken.",
+                "Sofortige Berechtigungserkennung: Bedienungshilfe, All-Files-Access und Installationen werden beim Zurückkehren zur App sofort aktiv.",
                 "Widget- & Launcher-Härtung: Bereinigung von RemoteViews-Attributen für stabilen Halt im Pixel Launcher und Deaktivierung unpassender Skalierung.",
-                "Quick-Settings-Tile: Automatische Synchronisation des Kachel-Zustands (Aktiv / Inaktiv).",
-                "Optimierter App-Lifecycle und Stabilitätsverbesserungen im Screen Lock Modul."
+                "Quick-Settings-Tile: Automatische Synchronisation des Kachel-Zustands (Aktiv / Inaktiv)."
             )
         ),
         ChangelogRelease(

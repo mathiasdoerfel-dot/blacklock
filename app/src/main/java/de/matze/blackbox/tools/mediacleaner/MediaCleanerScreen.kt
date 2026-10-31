@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+import androidx.activity.compose.BackHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -97,49 +98,64 @@ fun MediaCleanerScreen(onBack: () -> Unit) {
         refreshData()
     }
 
+    // Back gesture handling: preview -> tab 0 -> exit to hub
+    BackHandler(enabled = previewItem != null) {
+        previewItem = null
+    }
+    BackHandler(enabled = previewItem == null && selectedTab != 0) {
+        selectedTab = 0
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0A0D))
+            .navigationBarsPadding()
     ) {
         // Top Bar (Fixed)
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF121319))
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .statusBarsPadding()
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Zurück",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                        Text(
+                            text = "Media Cleaner",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "WhatsApp Private & Quick Share",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9CA3AF)
+                        )
+                    }
+                }
+                IconButton(onClick = { refreshData() }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Zurück",
-                        tint = Color.White
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Aktualisieren",
+                        tint = Color(0xFF9CA3AF)
                     )
                 }
-                Spacer(modifier = Modifier.width(6.dp))
-                Column {
-                    Text(
-                        text = "Media Cleaner",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "WhatsApp Private & Quick Share",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9CA3AF)
-                    )
-                }
-            }
-            IconButton(onClick = { refreshData() }) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Aktualisieren",
-                    tint = Color(0xFF9CA3AF)
-                )
             }
         }
 

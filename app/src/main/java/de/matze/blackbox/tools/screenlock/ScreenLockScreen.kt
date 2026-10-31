@@ -55,45 +55,52 @@ fun ScreenLockScreen(onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0A0D))
+            .navigationBarsPadding()
     ) {
         // Fixed Header
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF121319))
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .statusBarsPadding()
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Zurück",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                        Text(
+                            text = "BlackLock",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Bildschirm sperren per Tile & Widget",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9CA3AF)
+                        )
+                    }
+                }
+                IconButton(onClick = { isServiceActive = LockAccessibilityService.isServiceOrSettingActive(context) }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Zurück",
-                        tint = Color.White
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Status aktualisieren",
+                        tint = Color(0xFF9CA3AF)
                     )
                 }
-                Spacer(modifier = Modifier.width(6.dp))
-                Column {
-                    Text(
-                        text = "BlackLock",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Bildschirm sperren per Tile & Widget",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9CA3AF)
-                    )
-                }
-            }
-            IconButton(onClick = { isServiceActive = LockAccessibilityService.isServiceOrSettingActive(context) }) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Status aktualisieren",
-                    tint = Color(0xFF9CA3AF)
-                )
             }
         }
 

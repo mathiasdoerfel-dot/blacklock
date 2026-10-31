@@ -88,16 +88,22 @@ fun HubScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0A0D))
+            .navigationBarsPadding()
     ) {
         // App Header
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFF121319))
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .statusBarsPadding()
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -188,6 +194,7 @@ fun HubScreen(
                 }
             }
         }
+    }
 
         LazyColumn(
             modifier = Modifier
